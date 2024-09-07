@@ -2,6 +2,12 @@ To simulate data streaming.
 
 ### Quickstart
 
+```bash
+./setup-
+docker compose down # make sure no other compose instances are running
+docker compose up -d
+```
+
 #### Step 1: Create a Kafka Topic
 
 First, create a Kafka topic where you will send and receive messages. 
