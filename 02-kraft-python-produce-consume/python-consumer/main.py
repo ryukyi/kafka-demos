@@ -3,7 +3,7 @@ import sys
 
 # Define the Kafka consumer configuration
 conf = {
-    'bootstrap.servers': 'localhost:9092',  # Ensure this matches your broker's advertised listener
+    'bootstrap.servers': 'broker:9092',  # Ensure this matches your broker's advertised listener
     'group.id': 'python-consumer-group',
     'auto.offset.reset': 'earliest'
 }
