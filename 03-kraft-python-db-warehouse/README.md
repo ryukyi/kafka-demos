@@ -2,38 +2,26 @@
 
 ## Docker compose
 
-Start the broker and applications then remove the initializing script
+Start the broker and applications:
 
 ```bash
-docker compose up -d && \
-docker compose stop init-broker && \
-docker compose rm init-broker
+docker compose down -v && docker compose up
 ```
 
-## Python consumer and producer
+## Python producer
 
-We will read and write using python. First setup the virtual env using python 3.12:
+The consumer is already listening from docker compose. We are going to run the producer. First open the UI:
 
 ```bash
+http://localhost:8080
+```
+
+Now run the producer and send messages to the kafka broker:
+
+```bash
+cd python-producer
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -U pip && pip install confluent-kafka
+python main.py
 ```
-
-## Start Consumer
-
-Setup the python consumer to listen for events on the topic:
-
-```bash
-python -m python-consumer.main
-```
-
-## Create events from a producer
-
-In a new terminal, run python producer to send messages:
-
-```bash
-python -m python-producer.main
-```
-
-Now check the consumer to see the messages show.

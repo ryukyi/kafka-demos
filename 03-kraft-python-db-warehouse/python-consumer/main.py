@@ -1,9 +1,10 @@
+import sys
 import os
 import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging to output to STDOUT
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def consume_messages():
