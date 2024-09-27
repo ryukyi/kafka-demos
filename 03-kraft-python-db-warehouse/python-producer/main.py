@@ -1,4 +1,3 @@
-import os
 import logging
 
 from confluent_kafka import Producer
@@ -7,10 +6,8 @@ from confluent_kafka import Producer
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-KAFKA_BOOTSTRAP_SERVERS=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")
-# Kafka producer configuration
 conf = {
-    'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
+    'bootstrap.servers': 'broker:29092',
     'log_level': 7,
     'debug': 'all',
     'logger': logger

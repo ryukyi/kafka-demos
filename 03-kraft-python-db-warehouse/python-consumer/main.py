@@ -1,40 +1,39 @@
 import os
 import logging
-
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer, KafkaException, KafkaError
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-KAFKA_BOOTSTRAP_SERVERS=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")
+def consume_messages():
+    conf = {
+        'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'broker:29092'),
+        'group.id': 'python-consumer-group',
+        'auto.offset.reset': 'earliest'
+    }
 
-# Kafka consumer configuration
-conf = {
-    'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
-    'group.id': 'my-consumer-group',
-    'auto.offset.reset': 'earliest',
-    'log_level': 7,
-    'debug': 'all',
-    'logger': logger
-}
+    consumer = Consumer(conf)
+    consumer.subscribe(['python-events'])
 
-# Create Consumer instance
-consumer = Consumer(conf)
+    try:
+        while True:
+            msg = consumer.poll(timeout=1.0)
 
-# Subscribe to topic
-consumer.subscribe(['python-events'])
+            if msg is None:
+                continue
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    logger.info(f"Reached end of partition: {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+                elif msg.error():
+                    raise KafkaException(msg.error())
+            else:
+                logger.info(f"Received message: {msg.value().decode('utf-8')} from topic: {msg.topic()}")
 
-try:
-    while True:
-        msg = consumer.poll(timeout=1.0)
-        if msg is None:
-            continue
-        if msg.error():
-            raise KafkaException(msg.error())
-        logger.info(f"Received message: {msg.value().decode('utf-8')}")
-except KeyboardInterrupt:
-    pass
-finally:
-    # Close down consumer to commit final offsets.
-    consumer.close()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        consumer.close()
+
+if __name__ == '__main__':
+    consume_messages()
