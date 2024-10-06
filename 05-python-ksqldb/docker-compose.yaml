@@ -50,6 +50,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      DYNAMIC_CONFIG_ENABLED: true
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
 
@@ -64,55 +65,73 @@ services:
         condition: service_completed_successfully
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      DB_NAME: kafka_db 
+      DB_NAME: kafka-db 
       DB_USER: postgres
       DB_PASSWORD: postgres
-      DB_HOST: kafka_db
+      DB_HOST: kafka-db
 
-  # postgres db example
-  kafka_db:
-    image: postgres:latest
-    hostname: kafka_db
-    container_name: kafka_db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: kafka_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-  # cloud community edition - requires manual config
-  dbeaver:
-    image: dbeaver/cloudbeaver:latest
-    container_name: dbeaver
-    ports:
-      - "8978:8978"
-    volumes:
-      - ./db/dbeaver/workspaces/:/opt/cloudbeaver/workspaces/
-
-  # ksqlDB server
+  # ksql db
   ksqldb-server:
     image: confluentinc/ksqldb-server:latest
     hostname: ksqldb-server
     container_name: ksqldb-server
     depends_on:
-      broker:
-        condition: service_healthy
-    environment:
-      KSQL_CONFIG_DIR: "/etc/ksqldb"
-      KSQL_BOOTSTRAP_SERVERS: "broker:29092"
-      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      - broker
     ports:
       - "8088:8088"
+    environment:
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_BOOTSTRAP_SERVERS: broker:29092
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ksqldb-server:8088"]
+      interval: 10s
+      retries: 10
 
-  # ksqlDB CLI
+  # ksql cli
   ksqldb-cli:
     image: confluentinc/ksqldb-cli:latest
     container_name: ksqldb-cli
     depends_on:
       ksqldb-server:
         condition: service_healthy
-    entrypoint: /bin/sh
-    tty: true
+    volumes:
+      - ./ksqldb-cli/init-ksql.sql/:/data/scripts/init-ksql.sql
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        echo -e "\n\n⏳ Waiting for ksqlDB to be available before launching CLI\n"
+        while [ $(curl -s -o /dev/null -w %{http_code} http://ksqldb-server:8088) -eq 000 ]
+        do 
+          echo -e $(date) "ksqlDB Server HTTP state: " $(curl -s -o /dev/null -w %{http_code} http://ksqldb-server:8088) " (waiting for 200)"
+          sleep 5
+        done
+        echo -e "\n\n-> Running SQL commands\n"
+        cat /data/scripts/init-ksql.sql <(echo -e '\nEXIT') | ksql http://ksqldb-server:8088
+        echo -e "\n\n-> Sleeping…\n"
+        sleep infinity
+
+  # DBeaver
+  # ksql driver from confluent:
+  # https://www.confluent.io/hub/confluentinc/kafka-connect-jdbc
+  # navigating UI and download button:
+  # https://d2p6pa21dvn84.cloudfront.net/api/plugins/confluentinc/kafka-connect-jdbc/versions/10.8.0/confluentinc-kafka-connect-jdbc-10.8.0.zip
+  # DBeaver with startup script to download ksqlDB JDBC driver
+  dbeaver:
+    image: dbeaver/cloudbeaver:latest
+    hostname: dbeaver
+    container_name: dbeaver
+    ports:
+      - "8978:8978"
+    volumes:
+      - ./dbeaver/jdbc-drivers:/opt/dbeaver/drivers
+    environment:
+      - CB_SERVER_PORT=8978
+      - CB_SERVER_NAME=DBeaver
+    command: >
+      /bin/bash -c "
+      apt-get update && apt-get install -y curl unzip && 
+      curl -o /opt/dbeaver/drivers/confluentinc-kafka-connect-jdbc.zip https://d2p6pa21dvn84.cloudfront.net/api/plugins/confluentinc/kafka-connect-jdbc/versions/10.8.0/confluentinc-kafka-connect-jdbc-10.8.0.zip && 
+      unzip /opt/dbeaver/drivers/confluentinc-kafka-connect-jdbc.zip -d /opt/dbeaver/drivers/ && 
+      /opt/cloudbeaver/run-server.sh
+      "
