@@ -38,8 +38,9 @@ services:
     depends_on:
       broker:
         condition: service_healthy
-    entrypoint: "/opt/kafka/bin/kafka-topics.sh --create --partitions 30 --topic python-events --bootstrap-server broker:29092"
+    entrypoint: "/opt/kafka/bin/kafka-topics.sh --create --partitions 30 --topic fruit-topic --bootstrap-server broker:29092"
 
+  # User Interface for kafka
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     hostname: kafka-ui
@@ -111,27 +112,3 @@ services:
         echo -e "\n\n-> Sleeping…\n"
         sleep infinity
 
-  # DBeaver
-  # ksql driver from confluent:
-  # https://www.confluent.io/hub/confluentinc/kafka-connect-jdbc
-  # navigating UI and download button:
-  # https://d2p6pa21dvn84.cloudfront.net/api/plugins/confluentinc/kafka-connect-jdbc/versions/10.8.0/confluentinc-kafka-connect-jdbc-10.8.0.zip
-  # DBeaver with startup script to download ksqlDB JDBC driver
-  dbeaver:
-    image: dbeaver/cloudbeaver:latest
-    hostname: dbeaver
-    container_name: dbeaver
-    ports:
-      - "8978:8978"
-    volumes:
-      - ./dbeaver/jdbc-drivers:/opt/dbeaver/drivers
-    environment:
-      - CB_SERVER_PORT=8978
-      - CB_SERVER_NAME=DBeaver
-    command: >
-      /bin/bash -c "
-      apt-get update && apt-get install -y curl unzip && 
-      curl -o /opt/dbeaver/drivers/confluentinc-kafka-connect-jdbc.zip https://d2p6pa21dvn84.cloudfront.net/api/plugins/confluentinc/kafka-connect-jdbc/versions/10.8.0/confluentinc-kafka-connect-jdbc-10.8.0.zip && 
-      unzip /opt/dbeaver/drivers/confluentinc-kafka-connect-jdbc.zip -d /opt/dbeaver/drivers/ && 
-      /opt/cloudbeaver/run-server.sh
-      "

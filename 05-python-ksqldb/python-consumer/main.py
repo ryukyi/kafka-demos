@@ -14,7 +14,7 @@ conf = {
 }
 
 consumer = Consumer(conf)
-consumer.subscribe(['python-events'])
+consumer.subscribe(['fruit-topic'])
 
 # Function to consume messages from Kafka
 def consume_messages():

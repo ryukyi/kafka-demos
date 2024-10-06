@@ -1,19 +1,19 @@
 -- Create the initial stream from the Kafka topic
-CREATE STREAM python_events_stream (
+CREATE STREAM fruit_stream (
     number INT,
     fruit STRING
 ) WITH (
-    KAFKA_TOPIC='python-events',
+    KAFKA_TOPIC='fruit-topic',
     VALUE_FORMAT='JSON'
 );
 
 -- Create a table to calculate the average number over a 1-minute tumbling window
-CREATE TABLE average_number_table WITH (KAFKA_TOPIC='average_number_topic') AS
+CREATE TABLE fruit_average_count WITH (KAFKA_TOPIC='fruit-average-count-topic') AS
 SELECT
   fruit,
-  AVG(number) AS average_number
+  AVG(number) AS average_count
 FROM
-  python_events_stream
+  fruit_stream
 WINDOW TUMBLING (SIZE 1 MINUTE)
 GROUP BY
   fruit

@@ -1,7 +1,9 @@
-from confluent_kafka import Producer
 import json
 import socket
 import random
+from time import sleep
+
+from confluent_kafka import Producer
 
 # Callback for delivery reports
 def delivery_report(err, msg):
@@ -29,8 +31,9 @@ def produce_messages():
         # Select a random fruit from the list
         fruit = random.choice(fruits)
         message = {'number': i, 'fruit': fruit}
-        producer.produce('python-events', key=str(i), value=json.dumps(message), callback=delivery_report)
+        producer.produce('fruit-topic', key=str(i), value=json.dumps(message), callback=delivery_report)
         producer.poll(0)  # Trigger delivery report callbacks
+        sleep(0.33)
 
     producer.flush()  # Wait for all messages to be delivered
 
